@@ -20,23 +20,25 @@ library(bestglm)
 # Introduction
 
 
-In this project, we will build the best logistic regression model trained on data collected from the 2018 NBA playoff shot logs. Our model can then be used to predict how likely a shot will go into the basketball hoop based on a variety of shot-taking conditions. *Our focus is not to drop any poor models we initially find but to rather use them for comparison to explore why certain models may be better than others and why!*
+**Purpose:** The Golden State Warriors won the 2018 NBA Championship with the help of their leader and 2016 unanimous MVP, Stephen Curry. We are building a model that can analyze the conditions surrounding Steph Curry's shot selection and predict his shot's success rate based on these features. This kind of analysis would be useful to the Golden State Warriors by improving their star player's shooting efficiency. If built properly, this model could help Stephen Curry regain his MVP form and win his organization another championship!
 
-The dataset for this project is extracted from stats.nba.com and can be viewed at the following link: [Data Set Link](https://www.kaggle.com/boonpalipatana/nba-playoff-shots-2018). The NBA 2018 playoff shot data consists of 13,470 observations each with 24 columns describing the player, shot outcome, shot distance, shot type, minutes remaining etc.
+**Method of Approach:** The dataset for this project is extracted from stats.nba.com and can be viewed at the following link: [Data Set Link](https://www.kaggle.com/boonpalipatana/nba-playoff-shots-2018). The NBA 2018 playoff shot data consists of 13,470 observations each with 24 columns that describe the player, shot outcome, shot distance, shot type, minutes remaining etc.
 
-Since the GoldenState Warriors won the 2018 NBA playoffs, we will focus on the contributions of their team leader and 2016 unanimous MVP, Stephen Curry. We want to analyze and determine the factors that make his shooting so deadly on the court. The features we will consider to predict Curry's `shot_outcome` are: `game_clock`, `shot_distance`, and `home`. 
+We will build the best logistic regression model that can predict whether Steph Curry makes or misses a shot based on a variety of shot-taking conditions. The features we plan on using to predict Curry's shot `outcome` are: `game_clock`, `shot_distance`, and `home`. 
 
-    -`game_clock` is the time of the game that Curry takes a shot out of 48 minutes. We want to measure whether Curry becomes more accurate as the game progresses.
-    -`shot_distance` is the distance from the hoop that Curry takes a shot. Steph Curry is known for 3-point shots so we want to see if he is more accurate the farther he is away from the hoop (note: NBA regulation 3-point line is approximately 22-23 ft depending on which part of the arc). 
-    -`home` is whether a game is a home game or away game. Usually in sports, a home game with the fans cheering for their team will give the home team a mental edge throughout the game. We want to see if Steph Curry shoots just as well on the road in an away game as he is at home.
+  * `game_clock` is the time in game that Curry takes a shot out of 48 minutes. We want to measure whether Curry becomes more accurate as the game progresses. If he is more accurate in the third and fourth quarters, then maybe he should focus on passing and facilitating the ball earlier on in the ball game.
+  * `shot_distance` is the distance from the hoop that Curry takes a shot. Steph Curry is known for his deadly 3-point shooting, so we want to see just how accurate he is far from the hoop. If he is as accurate from behind the 3-point line as he is close to the hoop, shot distance should be insignificant in predicting shot outcome in a logistic regression model.
+  * `home` is whether Curry is playing in a home or away game. Usually in sports, having home court advantage with fans cheering for the home team will give them a mental edge throughout the game. We want to see if Steph Curry is affected when he is playing in an away game.
 
-We will create logistic regression models from varying combinations of these three predictors. Then we will compare these models to determine which is best in predicting whether Steph Curry will make a shot in the 2018 NBA playoffs.
+We first create three logistic regression models from varying combinations of these three predictors. Then we evaluate these models using empirical logit plots, Wald tests, and likelihood ratio tests. Finally, we compare models using the nested likelihood ratio test to determine the model that is best at predicting whether Steph Curry will make a shot.
+
+**Results**: Turns out that the best logistic model we built was our final model that uses `shot_distance` and `shot_worth` (variables we added) to predict shot `outcome`. Although Stephen Curry is an amazing 3-point shooter, he still makes layups (shots directly underneath the basket) so accurately that there is still a decreasing trend in efficiency the farther he shoots from the basket. Since `game_clock` and `home` are insignificant predictors, Curry isn't more accurate the longer he is in game and also shoots equally well at an away game as he does at home.
 
 
 # Data Cleaning
 
 
-We first import the dataset and take a look at the column names and their unique values. The only explanatory variable that requires no manipulation is `shot_distance` that appears in the dataset as `SHOT_DISTANCE`. We have to tidy the data to create the other two explanatory variables: `game_clock` and `home`. We also take note that we do not have a `shot_outcome` binary response variable that would allow it to fit into our logistic regression model. Since we are focusing on Stephen Curry's shot selection, we immediately filter the `playoff_shots` for just his shots.
+We first import the dataset and take a look at the column names and their unique values. The only explanatory variable that requires no manipulation is `shot_distance` that appears in the dataset as `SHOT_DISTANCE`. We have to tidy the data to create the other two explanatory variables: `game_clock` and `home`. We also take note that we do not have a `outcome` binary response variable that would allow it to fit into our logistic regression model. Since we are focusing on Stephen Curry's shot selection, we immediately filter the `playoff_shots` for just his shots.
 ```{r message=FALSE}
 # Import playoff_shots dataset
 playoff_shots <- read_csv("playoff_shots.csv")
@@ -50,7 +52,7 @@ Curry <- filter(playoff_shots, PLAYER_NAME == "Stephen Curry")
 
 ----
 
-We first need to create our `shot_outcome` response variable. This variable already exists in our dataset as `EVENT_TYPE` with character values of "Made Shot" and "Missed Shot". We change `EVENT_TYPE` to `shot_outcome` with integer values of 0 and 1.
+We first need to create our `outcome` response variable. This variable already exists in our dataset as `EVENT_TYPE` with character values of "Made Shot" and "Missed Shot". We change `EVENT_TYPE` to `outcome` with integer values of 0 and 1.
 ```{r}
 # Create shot_outcome variable
 Curry <- Curry %>%
@@ -61,7 +63,7 @@ Curry <- Curry %>%
 
 ----
 
-Next we create the explanatory variable, `home`, that determines whether a basketball game is a home or away game. Again, this variable already exists in our dataset as `HTM` with character values of which team is at home. We change `HTM` to `home` with values of 0 or 1 such that 1 represents a home game and 0 represents an away game.
+Next, we create the explanatory variable, `home`, that determines whether a basketball game is a home or away game. Again, this variable already exists in our dataset as `HTM` with character values of which team is at home. We change `HTM` to `home` with values of 0 or 1 such that 1 represents a home game and 0 represents an away game.
 ```{r}
 # Create home variable
 Curry <- Curry %>%
@@ -82,7 +84,7 @@ Curry <- Curry %>%
 
 ----
 
-We do some final renaming and selection so that we have a tidy dataframe to look at with just our response variable `outcome`, and our three explanatory variables: `game_clock`, `shot_distance`, and `home`.
+We do some final renaming and selection so that we have a tidy dataframe with just our response variable `outcome`, and our three explanatory variables: `game_clock`, `shot_distance`, and `home`.
 ```{r}
 # Rename SHOT_DISTANCE and select variables of interest
 Curry <- Curry %>%
@@ -99,7 +101,7 @@ head(Curry)
 For our first model, we will only use `game_clock` to predict `outcome`. We construct a simple logistic regression model and plot it.
 ```{r}
 # Create Model #1
-mod1 = glm(outcome ~ game_clock, family = binomial, data = Curry)
+(mod1 = glm(outcome ~ game_clock, family = binomial, data = Curry))
 
 # Plot
 B0 = summary(mod1)$coef[1]
@@ -109,56 +111,72 @@ plot(jitter(outcome, amount = 0.1) ~ game_clock, data = Curry,
 curve(exp(B0 + B1 * x) / (1 + exp(B0 + B1 * x)), add = TRUE, col = "red")
 ```
 
-----
 
-If our logistic regression model is a good fit for the data, Model #1 will have Log(Odds) as a linear function of `game_clock`. In other words, regardless of what value of `game_clock`, the odds ratio for a change in `game_clock` is constant. We evaluate Model #1 for this property through an empirical logit plot.
+## Empirical Logit Plot
+
+
+If our logistic regression model is a good fit for the data, Model #1 will have log(odds) as a linear function of `game_clock`. In other words, regardless of what value of `game_clock`, the odds ratio for a change in `game_clock` is constant. We evaluate Model #1 for this property through an empirical logit plot.
 ```{r}
 # Empirical logit plot
 emplogitplot1(mod1, data = Curry, xlim = c(0, 48), ylim = c(-2, 2), ngroups = 30,
               main = "Model #1 Empirical Logit Plot")
 ```
 
-Unfortuantely, the points in this plot are scattered at random and follows no linear pattern whatsoever. Thus, linearity does not hold for our `game_clock` model.
+Unfortunately, the points in this plot are scattered at random and follows no linear pattern whatsoever. Thus, linearity does not hold between `game_clock` nad log(odds) for this model.
 
-----
 
-Next, we conduct the Wald test to assess the overall effectiveness of Model #1. We use the `summary` function to view the Wald z-statistic for `game_clock`. The z-statistic tells us the correlation between `game_clock` and `outcome`.
+## Wald Test
+
+
+Next, we conduct the Wald test to assess the overall effectiveness of Model #1. We use the `summary` function to view the Wald z-statistic for `game_clock`. The z-statistic tells us if there is correlation between `game_clock` and `outcome`.
 ```{r}
 # Wald test
 summary(mod1)
 ```
 
-The null hypothesis is that the coefficient for `game_clock` is zero. The alternative hypothesis is that the coefficient for `game_clock` is not zero. The z-statistic equals 0.509, which means that the slope for `game_clock` is only approximately half a standard deviation above zero. A p-value of 0.611 is not less than the criterion of 0.05 so it is insignificant, and we fail to reject the null hypothesis. Thus, the null hypothesis is true, and there is not much correlation between `game_clock` and Steph Curry making a shot.
+**Null hypothesis**: The coefficient for `game_clock` is zero. 
 
-----
+**Alternative hypothesis**: The coefficient for `game_clock` is not zero. 
 
-Since the Wald test is not as accurate on smaller sample sizes, we also conduct a likelihood ratio test (G-test) to assess the overall effectiveness of Model #1. In this case, the G-test compares Model #1 to a constant model (has just intercept and no explanatory variables).
+**Result**: The z-statistic equals 0.509, which means that the slope for `game_clock` is only approximately half a standard deviation above zero. A p-value of 0.611 is not less than the criterion of 0.05 so it is insignificant, and we fail to reject the null hypothesis. Thus, the null hypothesis is true, and there is no correlation between `game_clock` and Steph Curry making a shot.
+
+
+## Likelihood Ratio Test
+
+
+Since the Wald test is not as accurate on smaller sample sizes, we also conduct a likelihood ratio test (G-test) to assess the overall effectiveness of Model #1. In this case, the G-test compares Model #1 to a slope-intercept model.
 ```{r}
 # Likelihood ratio test
 G = summary(mod1)$null.deviance - summary(mod1)$deviance
 sprintf("G-statistic: %e  p-value: %e", G, 1 - pchisq(G, 1))
 ```
 
-The null hypothesis is that the coefficient of `game_clock` is zero. The alternative hypothesis is that the coefficient of `game_clock` is not zero. We view the G-statistic as improvement gained from adding the `game_clock` term to our model. Since the G-statistic of 0.259 is very small, this indicates that adding the `game_clock` term to our model didn't really improve it much. We find the p-value to be 0.610, which is insignificant, so we fail to reject the null hypothesis. Therefore, the null hypothesis is true and there is no correlation between Steph Curry making a shot and the `game_clock`.
+**Null hypothesis**: The coefficient of `game_clock` is zero.
 
-----
+**Alternative hypothesis**: The coefficient of `game_clock` is not zero.
 
-We finally calculate a 95% confidence interval for coefficient estimates of `game_clock`.
+**Result**: We view the G-statistic as improvement gained from adding the `game_clock` term to our model. Since a G-statistic of 0.259 is very small, adding the `game_clock` term to our model didn't really improve it. We find the p-value to be 0.610, which is insignificant, so we fail to reject the null hypothesis. Therefore, the null hypothesis is true and there is no correlation between `game_clock` and Steph Curry making a shot.
+
+
+## Confidence Interval
+
+
+We calculate a 95% confidence interval for coefficient estimates of `game_clock`.
 ```{r}
 # Confidence interval
 exp(confint.default(mod1))
 ```
 
-We are 95% confidence the true mean lies on the interval (0.9868292, 1.022819). This means that we are 95% confident that as `game_clock` increases by one minute, the increase in odds of Steph Curry making a shot will fall between (0.987, 1.023). In other words, an increase of one minute in `game_clock` either decreases Steph Curry's chances of making a shot by as much as a factor of 0.987 or increases his chances of making a shot by as much as a factor of 1.023. Since the chances that Steph Curry will make a shot can increase or decrease as `game_clock` increases, `game_clock` is not a very good predictor for `outcome`. This supports our summary analysis above since we didn't find much of a correlation between `game_clock` and Steph Curry making a shot.
+We are 95% confidence the true mean lies on the interval (0.987, 1.023). This means that we are 95% confident that as `game_clock` increases by one minute, the increase in odds of Steph Curry making a shot will fall between (0.987, 1.023). In other words, an increase of one minute in `game_clock` either decreases Steph Curry's chances of making a shot by as much as a factor of 0.987 or increases his chances of making a shot by as much as a factor of 1.023. Since the chances that Steph Curry will make a shot can increase or decrease as `game_clock` increases, `game_clock` is not a very good predictor for `outcome`. This supports our summary analysis above where we didn't find much of a correlation between `game_clock` and Steph Curry making a shot.
 
 
 # Model #2: `shot_distance`
 
 
-For our second model, we will only use one explanatory variable, `shot_distance`, to predict `outcome` as well. The process of creating and assessing the model's ability to predict `outcome` should follow very similar to that of Model #1; we start by constructing a simple logistic regression model and plotting it.
+For our second model, we will again only use one explanatory variable, `shot_distance`, to predict `outcome`. The process of creating and assessing the model's ability to predict `outcome` should be very similar to what we did for Model #1; we start by constructing a simple logistic regression model and plotting it.
 ```{r}
 # Model #2
-mod2 = glm(outcome ~ shot_distance, family = binomial, data = Curry)
+(mod2 = glm(outcome ~ shot_distance, family = binomial, data = Curry))
 
 # Plot
 B0 = summary(mod2)$coef[1]
@@ -168,18 +186,22 @@ plot(jitter(outcome,amount = 0.1) ~ shot_distance, data = Curry,
 curve(exp(B0 + B1 * x)/(1 + exp(B0 + B1 * x)), add = TRUE, col = "red")
 ```
 
-----
 
-We against first construct a empirical logit plot to get an initial assessment of Model #2.
+## Empirical Logit Plot
+
+
+We again construct a empirical logit plot to get an initial assessment of Model #2.
 ```{r}
 # Empirical logit plot
 emplogitplot1(mod2, data = Curry, xlim = c(0, 33), ylim = c(-2, 2), ngroups = 9,
               main = "Model #2 Empirical Logit Plot")
 ```
 
-Model #2 is a good fit for the data if Log(Odds) is a linear function of `shot_distance`. Since most of the points in this plot follow a linear trend and do not stray too far from the line, Model #2 may be a good fit for our data.
+Model #2 is a good fit for the data if log(odds) is a linear function of `shot_distance`. Since most of the points in this plot follow a linear trend and do not stray too far from the line, Model #2 may be a good fit for our data.
 
-----
+
+## Wald Test
+
 
 We again conduct a Wald test to evaluate the overall fit of Model #2.
 ```{r}
@@ -187,9 +209,15 @@ We again conduct a Wald test to evaluate the overall fit of Model #2.
 summary(mod2)
 ```
 
-The null hypothesis is that the coefficient for `shot_distance` is zero. The alternative hypothesis is that the coefficient for `shot_distance` is not zero. The z-statistic equals -3.442, which means the slope of `shot_distance` is more than three standard deviations below zero. A p-value of 5.78e-4 is significant so we can reject the null hypothesis. Thus, the alternative hypothesis is true and there is signficant correlation between `shot_distance` and Steph Curry making the shot.
+**Null hypothesis**: The coefficient for `shot_distance` is zero.
 
-----
+**Alternative hypothesis**: The coefficient for `shot_distance` is not zero.
+
+**Result**: The z-statistic equals -3.442, which means the slope of `shot_distance` is more than three standard deviations below zero. A p-value of 5.78e-4 is significant so we can reject the null hypothesis. Thus, the alternative hypothesis is true and there is signficant correlation between `shot_distance` and Steph Curry making the shot.
+
+
+## Likelihood Ratio Test
+
 
 We conduct a likelihood ratio test (G-test) for a secondary validation of Model #2.
 ```{r}
@@ -198,19 +226,27 @@ G2 = summary(mod2)$null.deviance - summary(mod2)$deviance
 sprintf("G-statistic: %e  p-value: %e", G2, 1 - pchisq(G2, 1))
 ```
 
-The null hypothesis is that the coefficient of `shot_distance` is zero. The alternative hypothesis is that the coefficient of `shot_distance` is not zero. We view the G-statistic as improvement gained from adding the `shot_distance` term to our model. Since a G-statistic of approximately 12.28 is much greater than zero, this indicates that adding the `shot_distance` term to our model did improve our model. A p-value of 4.57e-4 is significant so we reject the null hypothesis. Thus, the alternative hypothesis is true and there is significant correlation between Steph Curry making a shot and `shot_distance`.
+**Null hypothesis**: The coefficient of `shot_distance` is zero.
 
-----
+**Alternative hypothesis**: The coefficient of `shot_distance` is not zero.
 
-We again calculate a 95% confidence interval to determine how much Steph Curry's chances of making a shot decreases as `shot_distance` increases.
+**Result**: We view the G-statistic as improvement gained from adding the `shot_distance` term to our model. Since a G-statistic of approximately 12.28 is much greater than zero, this indicates that adding the `shot_distance` term to our model did improve our model. A p-value of 4.57e-4 is significant so we reject the null hypothesis. Thus, the alternative hypothesis is true and there is significant correlation between Steph Curry making a shot and `shot_distance`.
+
+
+## Confidence Interval
+
+
+We again calculate a 95% confidence interval to determine how much Curry's chances of making a shot decreases as `shot_distance` increases.
 ```{r}
 # Confidence interval
 exp(confint.default(mod2))
 ```
 
-We are 95% confidence the true mean lies on the interval (0.9371499, 0.9823526). This means that as `shot_distance` increases by one foot, the decrease in odds of Steph Curry making the shot will fall between (0.937, 0.982). In other words, we are 95% confident that Steph Curry's chances of making a shot will decrease by as little as a factor of 0.982 or decrease as much as a factor of 0.937 for every foot farther from the basket he shoots the ball from. This makes sense since making a three point bucket 24 feet out is way harder than making a layup right in front of the basket.
+We are 95% confidence the true mean lies on the interval (0.937, 0.982). This means that as `shot_distance` increases by one foot, the decrease in odds of Steph Curry making the shot will fall between (0.937, 0.982). In other words, we are 95% confident that Steph Curry's chances of making a shot will decrease by as little as a factor of 0.982 or decrease as much as a factor of 0.937 for every foot farther from the basket he shoots the ball from. This makes sense since making a three point bucket 24 feet out is way harder than making a layup right in front of the basket.
 
-----
+
+## Stephen Curry 3-Point Accuracy?
+
 
 However, I want to understand why `shot_distance` is a significant explanatory variable in predicting Stephen Curry's shot. Already known as the best distance shooter of all time due to how well he shoots the 3-point shot, I thought that `shot-distance` would not be a significant variable in predicting Curry's shot outcome within a logistic model. I decide to visualize the proportion of shots he makes depending on `shot_distance`. I also filter out distances where he took 5 shots or less.
 ```{r}
@@ -224,16 +260,16 @@ greater_than_5 <- Curry %>%
 Curry %>% 
   right_join(greater_than_5, "shot_distance") %>% 
   ggplot() +
-  geom_bar(aes(shot_distance, group = outcome, fill = outcome), position = "fill", alpha = 3/5) +
+  geom_bar(aes(shot_distance, group = outcome, fill = outcome, color = outcome), position = "fill", alpha = 2/5) +
   geom_bar(data = filter(Curry, shot_distance == 22),
             aes(shot_distance, group = outcome, fill = outcome), position = "fill")
 ```
 
-*Each bar is split into a light blue and dark blue section. The light blue represents the proportion of shots that Curry makes at that particular `shot_distance`.*
+*Each bar is split into a light blue and black section. The light blue represents the proportion of shots that Curry makes at that particular `shot_distance`. We single out one bar (22 feet) that will be addressed later on.*
 
 This visualization makes it much more clear how there is a clear downward trend in percentage of shots made as `shot_distance` increases. Even though Steph Curry is remarkably accurate from distance, it isn't enough to discourage a correlation between `shot_distance` and `outcome` in a simple logistic regression model.
 
-On an interesting note, we highlight the `shot_distance` bar at 22 feet that corresponds to 3-point shots taken at the left and right corners of the court. Steph Curry makes over 50% of those 3-point shots; at the corners of the court, he is almost as accurate as he is 1 foot away from the basket!
+On an interesting note, we highlight the `shot_distance` bar at 22 feet that corresponds to 3-point shots taken at the left and right corners of the court. Steph Curry makes over 50% of those 3-point shots! At the corners of the court, he is almost as accurate as he is 1 foot away from the basket!
 
 
 # Model #3: `shot_distance + game_clock + home`
@@ -242,21 +278,29 @@ On an interesting note, we highlight the `shot_distance` bar at 22 feet that cor
 After creating two separate simple logistic regression models for `game_clock` and `shot_distance`, we will now create a multiple logistic regression model using `game_clock`, `shot_distance`, and `home`.
 ```{r}
 # Model #3
-mod3 = glm(outcome ~ shot_distance + game_clock + home, family = binomial, data = Curry)
+(mod3 = glm(outcome ~ shot_distance + game_clock + home, family = binomial, data = Curry))
 ```
 
-----
 
-We first conduct a likelihood ratio test (G-test) to test for the overall effectiveness of the model. This time, we are comparing our model with three predictors to a constant model.
+## Likelihood Ratio Test
+
+
+We first conduct a likelihood ratio test (G-test) to test for the overall effectiveness of the model. This time, we are comparing our model with three predictors to a slope-intercept model.
 ```{r}
 # Likelihood ratio test
 G3 = summary(mod3)$null.deviance - summary(mod3)$deviance
 sprintf("G-statistic: %e  p-value: %e", G3, 1 - pchisq(G3, 1))
 ```
 
-The null hypothesis is that all the coefficients of the predictors are zero. The alternative hypothesis is that at least one of the coefficients of the predictors is not zero. We view the G-statistic as improvement gained from adding `game_clock`, `shot_distance`, and `home` predictors to our constant model. Since a G-statistic equals 14.0154, adding the three predictors definitely improved our model. A p-value of 1.813e-4 is significant so we can reject the null hypothesis. Therefore, the alternative hypothesis is true and there is some correlation between Steph Curry making a shot and at least one of the predictors: `game_clock`, `shot_distance`, and `home`.
+**Null hypothesis**: The coefficients of the predictors are all zero. 
 
-----
+**Alternative hypothesis**: At least one of the coefficients of the predictors is not zero.
+
+**Result**: We view the G-statistic as improvement gained from adding `game_clock`, `shot_distance`, and `home` predictors to a slope-intercept model. Since a G-statistic equals 14.0154, adding the three predictors definitely improved our model. A p-value of 1.813e-4 is significant so we can reject the null hypothesis. Therefore, the alternative hypothesis is true and there is some correlation between Steph Curry making a shot and at least one of the predictors: `game_clock`, `shot_distance`, and `home`.
+
+
+## Wald Test
+
 
 Our likelihood ratio test determined that at least one of our predictors has a significant correlation with `outcome`. Now we will run the Wald test again to see which of our predictors has that significant correlation.
 ```{r}
@@ -264,13 +308,16 @@ Our likelihood ratio test determined that at least one of our predictors has a s
 summary(mod3)
 ```
 
-The null hypothesis is that the coefficient for the tested predictor is zero. The alternative hypothesis is that the coefficient for the tested predictor is not zero.
+**Null hypothesis**: The coefficient for the tested predictor is zero.
+**Alternative hypothesis**: The coefficient for the tested predictor is not zero.
 
-`shot_distance`: The z-statistic is -3.487, which means the slope for `shot_distance` is more than three standard deviations below zero. A p-value of 4.89e-4 is significant so we can reject the null hypothesis. Thus, the alternative hypothesis is true and there is significant correlation between `shot_distance` and Steph Curry making a shot.
+**Result:**
 
-`game_clock`: The z-statistic is 0.256, which means the slope for `game_clock` is very close to zero. A p-value of 0.798 is insignificant so we fail to reject the null hypothesis. Thus, the null hypothesis is true and there is no significant correlation between `game_clock` and Steph Curry making a shot.
+  * `shot_distance`: The z-statistic is -3.487, which means the slope for `shot_distance` is more than three standard deviations below zero. A p-value of 4.89e-4 is significant so we can reject the null hypothesis. Thus, the alternative hypothesis is true, and there is significant correlation between `shot_distance` and Steph Curry making a shot.
 
-`home`: The z-statistic is 1.288, which means the slope for home is one standard deviation above zero. The p-value of 0.198 is insignificant so we fail to reject the null hypothesis. Thus, the null hypothesis is true and there is no significant correlation between Steph Curry making a shot and whether or not he is playing at home.
+  * `game_clock`: The z-statistic is 0.256, which means the slope for `game_clock` is very close to zero. A p-value of 0.798 is insignificant so we fail to reject the null hypothesis. Thus, the null hypothesis is true, and there is no significant correlation between `game_clock` and Steph Curry making a shot.
+
+  * `home`: The z-statistic is 1.288, which means the slope for home is one standard deviation above zero. The p-value of 0.198 is insignificant so we fail to reject the null hypothesis. Thus, the null hypothesis is true, and there is no significant correlation between Steph Curry making a shot and whether or not he is playing at home.
 
 In conclusion, since one of our predictors is significant, our results match that of the G-test.
 
@@ -278,7 +325,7 @@ In conclusion, since one of our predictors is significant, our results match tha
 # Finding the Best Model
 
 
-We first compare our two simple logistic regression models, `game_clock` and `shot_distance`. Although we already know that `shot_distance` is the better model because its predictor is significant while `game_clock` isn't, we still compare the two G-statistics. We also plot both empirical logit plots side by side for comparison.
+We first compare our two simple logistic regression models, `game_clock` and `shot_distance`. We already know that `shot_distance` is the better model because its predictor is significant while `game_clock` isn't; we still compare the two G-statistics and plot both empirical logit plots side by side as another metric for comparison.
 ```{r}
 # Likelihood ratio test
 sprintf("Model #1 G-statistic: %e  Model #2 G-statistic: %e", G, G2)
@@ -290,51 +337,45 @@ emplogitplot1(mod2, data = Curry, xlim=c(0,33), ylim=c(-2,2), ngroups = 9, main 
 
 The G-statistic measures the difference in residual deviances for both models. The higher the difference in residual deviance, the greater the improvement in the model when including the respective predictor. The `shot_distance` model clearly wins here with a G-statistic of approximately 12 while the `game_clock` model has a G-statistic of close to 0. 
 
-If you look at the linearity of the logistic regression model, the `shot_distance` model holds linearity way better compared to the `game_clock` model. 
+If we look at the empirical logit plots, the `shot_distance` model holds linearity way better compared to the `game_clock` model. 
 
 In conclusion, the `shot_distance` model is a much more effective simple logistic regression model at predicting whether Steph Curry will make a shot in the 2018 NBA playoffs.
 
-----
 
-Next, we test our multiple logistic regression model (Model #3) with the two simple logistic regression models. First, we test Model #3 with the `game_clock` model through a nested likelihood ratio test.
+## Nested Likelihood Ratio Test
+
+
+We now test Model #3 with the `shot_distance` model through a nested likelihood ratio test.
 ```{r}
 # Nested likelihood ratio test
-G4 = summary(mod1)$deviance - summary(mod3)$deviance
+G4 = summary(mod2)$deviance - summary(mod3)$deviance
 sprintf("G-statistic: %e  p-value: %e", G4, 1 - pchisq(G4, 1))
-```
-
-The null hypothesis is that the coefficients of all the additional predictors is zero. The alternative hypothesis is that at least one of the coefficients of the additional predictors is not zero. We view the G-statistic as improvement gained from adding `shot_distance` and `home` predictors to our `game_clock` model. Since the G-statistic is 13.756, it indicates that adding the two predictors improved our model. A p-value of 2.082e-4 is significant so we can reject the null hypothesis. Therefore, the alternative hypothesis is true indicating that the addition of the `shot_distance` and `home` terms to our `game_clock` model is a significant improvement in predicting the odds of Steph Curry making a shot.
-
-----
-
-We test Model #3 with the `shot_distance` model through a nested likelihood ratio test as well.
-```{r}
-# Nested likelihood ratio test
-G5 = summary(mod2)$deviance - summary(mod3)$deviance
-sprintf("G-statistic: %e  p-value: %e", G5, 1 - pchisq(G5, 1))
 ```
 
 We view the G-statistic as improvement gained from adding `game_clock` and `home` predictors to our `shot_distance` model. The G-statistic is 1.731 (pretty close to zero), which means that adding the two predictors only slightly improved our model since there is a small difference in deviances. A p-value of 0.188 is insignficiant so we fail to reject the null hypothesis. Therefore, the null hypothesis is true indicating that the addition of the `game_clock` and `home` terms to our `shot_distance` model is not a significant improvement in predicting the odds of Steph Curry making a shot.
 
-**In conclusion, our `shot_distance` model (Model #2) seems to be the best model out of the three.**
+**In conclusion, our `shot_distance` simple logistic model (Model #2) is the best model out of the three.**
 
-----
 
-An alternate method to finding the best logistic regression model is using the `bestglm` function. I wish to include two more variables in addition to `game_clock`, `shot_distance`, and `home` to see if they will help us build a better model. The additional variables are `seconds_remaining` and `shot_worth`.
+## Final Model
 
-    -`seconds_remaining` will be the number of seconds remaining in a quarter.
-    -`shot_worth` will be the type of shot, whether it is a 2-point or 3-point shot, represented by 0 and 1 respectively.
+
+After seeing the results of our previous analysis, I want to add some new variables to build a new model. I want to know whether Curry becomes more accurate as each quarter comes to a close and whether he is more accurate shooting a 3-point shot as compared to a 2-point shot. As a result, we add `seconds_remaining` and `shot_worth` variables to our dataset to model.
 ```{r}
 # Cleaning dataset for just our five explanatory variables and one response variable
 tmp <- playoff_shots %>% 
+  
   # Filtering dataset for Stephen Curry
   filter(PLAYER_NAME == "Stephen Curry") %>%
+  
   # Creating shot_worth variable
   mutate(shot_worth = case_when(
     SHOT_TYPE == "2PT Field Goal" ~ 0,
     SHOT_TYPE == "3PT Field Goal" ~ 1)) %>% 
+  
   # Creating seconds_remaining variable
   mutate(seconds_remaining = SECONDS_REMAINING) %>% 
+  
   # Adding game_clock, shot_distance, home
   mutate(outcome = case_when(
     EVENT_TYPE == "Missed Shot" ~ 0,
@@ -344,18 +385,26 @@ tmp <- playoff_shots %>%
     HTM != "GSW" ~ 0),
         game_clock = 12*(PERIOD - 1) + (12 - MINUTES_REMAINING),
         shot_distance = SHOT_DISTANCE) %>% 
+  
+  # Choosing only shots in the first 48min. of regulation time
   filter(game_clock <= 48) %>% 
+  
+  # Selecting only our variables of interest
   select(seconds_remaining, shot_distance, game_clock, home, shot_worth, outcome)
 
 # bestglm function
 tmp = as.data.frame(tmp)
-bestglm(tmp, family=binomial)$BestModel
+mod4 <- bestglm(Xy = tmp, family = binomial, IC = "AIC", method = "exhaustive")
+
+# Printing results
+mod4$BestModels
+mod4$BestModel
 ```
 
-We plug `shot_distance`, `game_clock`, `home`, `seconds_remaining`, and `shot_worth` into our `bestglm` function to find the best model. The best model from `bestglm` still is our simple logistic regression `shot_distance` model. This model has the lowest AIC of 351.2 out of all the other models it was compared with. Like Mallow's Cp, a smaller AIC value indicate a model with a better fit for our data.
+We plug `shot_distance`, `game_clock`, `home`, `seconds_remaining`, and `shot_worth` into our `bestglm` function to find the best logistic model. This model is chosen based on the AIC/R-squared values of the individual models. In general if the AIC is lower, the model will be better. This time, the best model has two variables, `shot_distance` and `shot_worth`, to predict `outcome`. With an AIC value of 349.1 and a G-statistic of 16.4, we can say that this model is better than Model #2 that only uses `shot_distance` as a predictor.
 
 
 # Conclusion
 
 
-This project mostly focuses on using the empirical logit plot, Wald test, and likelihood ratio test to discover the best logistic regression model to predict the outcome of Stephen Curry's shot in the 2018 NBA playoffs. Model #2 ~ `shot_distance` seems to be the best model out of the three we created and evaluated. Even out of the five variables `bestglm` considered, the best model was still a single logistic regression model with `shot_distance` as the only explanatory variable.
+Our initial goal was to build a model that can accurately predict whether Stephen Curry's shot goes in based on his shot selection conditions. This project mostly focused on using the empirical logit plot, Wald test, and likelihood ratio test to evaluate the three logistic regression models we built. We then used the nested likelihood ratio test to determine that Model #2 (`shot_distance` to predict `outcome`) to be the best model out of the three. We finally used `bestglm` to discover a model that has a lower AIC and higher G-statistic value that uses `shot_distance` and `shot_worth` to predict shot `outcome`. We settle with this model as our final product to predict the likelihood of Stephen Curry making a shot in the NBA.
